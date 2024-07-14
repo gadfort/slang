@@ -19,8 +19,34 @@
 #include "slang/util/Bag.h"
 #include "slang/util/BumpAllocator.h"
 #include "slang/util/VersionInfo.h"
+#include "slang/util/OS.h"
 
 namespace fs = std::filesystem;
+
+class IORedirect
+{
+    public:
+        IORedirect() = default;
+        IORedirect& enter() {
+            OS::captureOutput(false);
+            return *this;
+        }
+
+        void exit() {
+            OS::stopCaptureOutput();
+        }
+
+        std::string out() const {
+            return OS::capturedStdout;
+        }
+        std::string err() const {
+            return OS::capturedStderr;
+        }
+        void clear() const {
+            OS::capturedStdout.clear();
+            OS::capturedStderr.clear();
+        }
+};
 
 void registerUtil(py::module_& m) {
     py::class_<BumpAllocator>(m, "BumpAllocator").def(py::init<>());
@@ -317,4 +343,12 @@ void registerUtil(py::module_& m) {
         .def("report", &TextDiagnosticClient::report, "diag"_a)
         .def("clear", &TextDiagnosticClient::clear)
         .def("getString", &TextDiagnosticClient::getString);
+
+    py::class_<IORedirect>(m, "IORedirect")
+        .def(py::init<>())
+        .def("__enter__", &IORedirect::enter)
+        .def("__exit__", [](IORedirect self_, py::args) { self_.exit(); })
+        .def("out", &IORedirect::out)
+        .def("err", &IORedirect::err)
+        .def("clear", &IORedirect::clear);
 }

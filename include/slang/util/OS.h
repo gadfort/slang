@@ -60,12 +60,17 @@ public:
     static std::string getEnv(const std::string& name);
     static std::string parseEnvVar(const char*& ptr, const char* end);
 
-    static auto captureOutput() {
+    static auto captureOutput(bool usescope = true) {
         capturedStdout.clear();
         capturedStderr.clear();
 
         capturingOutput = true;
-        return ScopeGuard([] { capturingOutput = false; });
+
+        return ScopeGuard([usescope] { if (usescope) stopCaptureOutput(); });
+    }
+
+    static void stopCaptureOutput() {
+        capturingOutput = false;
     }
 
     static inline std::string capturedStdout;
